@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MAINTAIN AI — ML Lab</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1118;color:#e7edf5}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0%,#17283a 0,#0b1118 42%);min-height:100vh}
+    .wrap{max-width:1180px;margin:auto;padding:32px 20px 56px}.top{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}
+    h1{margin:0;font-size:26px}.muted{color:#8d9aaa}.badge{padding:8px 12px;border-radius:999px;border:1px solid #225f4e;background:#103529;color:#55e0b2;font-size:13px;font-weight:700}
+    .grid{display:grid;grid-template-columns:1fr 1.4fr;gap:18px}.card{background:#111a24;border:1px solid #22303e;border-radius:16px;padding:20px;box-shadow:0 14px 40px #0004}.wide{grid-column:1/-1}
+    h2{font-size:15px;margin:0 0 14px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}.stat{background:#0d151e;border:1px solid #202c39;border-radius:12px;padding:13px}.stat b{display:block;margin-top:5px;font-size:16px}
+    textarea{width:100%;min-height:130px;resize:vertical;background:#0a1118;color:#dce5ef;border:1px solid #2b3948;border-radius:10px;padding:12px;font:13px ui-monospace,SFMono-Regular,Consolas,monospace}
+    input,select{background:#0a1118;color:#dce5ef;border:1px solid #2b3948;border-radius:9px;padding:10px}button{border:0;border-radius:9px;padding:10px 14px;background:#3d8cff;color:white;font-weight:700;cursor:pointer}button.secondary{background:#202d3b}button:disabled{opacity:.5;cursor:wait}
+    canvas{width:100%;height:320px;background:#0a1118;border:1px solid #202c39;border-radius:12px}.status{min-height:44px;background:#0a1118;border-radius:10px;padding:12px;color:#9fb0c2;font-family:ui-monospace,monospace;font-size:12px;white-space:pre-wrap}
+    pre{margin:0;max-height:260px;overflow:auto;background:#0a1118;border:1px solid #202c39;border-radius:10px;padding:14px;color:#b9c8d8;font-size:12px}.ok{color:#55e0b2}.err{color:#ff766b}
+    @media(max-width:850px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.stats{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><div class="muted">MAINTAIN AI</div><h1>ML Lab · Chronos-2 Test Console</h1></div><div id="online" class="badge">Checking service…</div></div>
+  <div class="grid">
+    <section class="card">
+      <h2>Model status</h2>
+      <div class="stats"><div class="stat">Model<b id="model">—</b></div><div class="stat">Device<b id="device">—</b></div><div class="stat">Available<b id="available">—</b></div></div>
+      <h2>Sensor input</h2>
+      <textarea id="values">26.1, 26.3, 26.2, 26.5, 26.7, 26.8, 27.0, 27.2, 27.1, 27.4, 27.6, 27.8, 28.0, 28.1, 28.3, 28.5</textarea>
+      <div class="row" style="margin-top:12px"><label class="muted">Horizon</label><input id="horizon" type="number" min="1" max="64" value="12"/><button class="secondary" id="sample">Generate test signal</button><button id="run">Run Chronos-2</button></div>
+      <div id="status" class="status" style="margin-top:12px">Ready. No inference request has been sent yet.</div>
+    </section>
+
+    <section class="card"><h2>Forecast</h2><canvas id="chart" width="900" height="320"></canvas></section>
+    <section class="card wide"><h2>Inference result</h2><pre id="result">No result yet.</pre></section>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id); let lastForecast=[];
+function nums(){return $('values').value.split(/[,\s]+/).map(Number).filter(Number.isFinite)}
+function draw(actual,forecast){const c=$('chart'),x=c.getContext('2d'),w=c.width,h=c.height;x.clearRect(0,0,w,h);const all=actual.concat(forecast),min=Math.min(...all),max=Math.max(...all),pad=24,range=Math.max(max-min,.001);x.strokeStyle='#263747';x.lineWidth=1;for(let i=0;i<5;i++){let y=pad+(h-pad*2)*i/4;x.beginPath();x.moveTo(pad,y);x.lineTo(w-pad,y);x.stroke()}const px=i=>pad+(w-pad*2)*i/Math.max(all.length-1,1),py=v=>h-pad-(v-min)/range*(h-pad*2);function line(vals,offset){x.beginPath();vals.forEach((v,i)=>{let X=px(i+offset),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()}x.lineWidth=3;x.strokeStyle='#7db2ff';line(actual,0);if(forecast.length){x.setLineDash([8,6]);x.strokeStyle='#55e0b2';line([actual.at(-1),...forecast],actual.length-1);x.setLineDash([])}x.fillStyle='#8d9aaa';x.font='12px system-ui';x.fillText('actual',pad,18);if(forecast.length)x.fillText('forecast',pad+70,18)}
+async function health(){try{let r=await fetch('/health');let d=await r.json();$('online').textContent=d.status==='ok'?'● ONLINE':'OFFLINE';$('online').className='badge'}catch(e){$('online').textContent='● OFFLINE';$('online').className='badge err'}try{let r=await fetch('/models');let d=await r.json(),m=d.models['chronos-2'];$('model').textContent=m.model||'chronos-2';$('device').textContent=m.device||'—';$('available').textContent=m.available?'YES':'NO'}catch(e){}}
+$('sample').onclick=()=>{let base=25+Math.random()*2,a=Array.from({length:32},(_,i)=>+(base+i*.12+Math.sin(i/2)*.7+(Math.random()-.5)*.25).toFixed(2));$('values').value=a.join(', ');draw(a,[]);$('status').textContent='Generated 32-point test telemetry. Ready to infer.'};
+$('run').onclick=async()=>{let values=nums(),h=Number($('horizon').value);if(values.length<2){$('status').textContent='Enter at least two numeric samples.';return}$('run').disabled=true;$('status').textContent='Sending POST /v1/forecast…';const t=performance.now();try{let r=await fetch('/v1/forecast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'chronos-2',values,horizon:h})});let d=await r.json(),ms=(performance.now()-t).toFixed(0);$('result').textContent=JSON.stringify(d,null,2);lastForecast=Array.isArray(d.forecast)?d.forecast:[];draw(values,lastForecast);$('status').textContent=(r.ok?'✓ ':'✕ ')+r.status+' · '+ms+' ms · '+(lastForecast.length?lastForecast.length+' predictions received':(d.reason||'no forecast'));$('status').className='status '+(r.ok?'ok':'err')}catch(e){$('status').textContent='✕ Request failed: '+e;$('status').className='status err'}finally{$('run').disabled=false}};
+health();draw(nums(),[]);
+</script>
+</body>
+</html>
