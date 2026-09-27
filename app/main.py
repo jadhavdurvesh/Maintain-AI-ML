@@ -1,0 +1,33 @@
+from fastapi import FastAPI, HTTPException
+
+from .chronos import forecast as chronos_forecast
+from .chronos import status as chronos_status
+from .schemas import ForecastRequest, ForecastResponse
+
+app = FastAPI(title="MAINTAIN AI ML", version="0.1.0")
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "maintain-ai-ml"}
+
+@app.get("/models")
+def models():
+    return {
+        "models": {
+            "chronos-2": chronos_status(),
+            "timer": {"available": False, "status": "planned_after_chronos"},
+        }
+    }
+
+@app.post("/v1/forecast", response_model=ForecastResponse)
+def forecast(payload: ForecastRequest):
+    if payload.model == "timer":
+        raise HTTPException(status_code=501, detail="Timer adapter is not implemented yet")
+    status = chronos_status()
+    if not status.get("available"):
+        return ForecastResponse(available=False, model="chronos-2", horizon=payload.horizon, reason=status.get("reason"))
+    try:
+        result = chronos_forecast(payload.values, payload.horizon)
+        return ForecastResponse(available=True, model="chronos-2", forecast=result, horizon=payload.horizon)
+    except Exception as exc:
+        return ForecastResponse(available=False, model="chronos-2", horizon=payload.horizon, reason=f"inference failed: {exc}")
