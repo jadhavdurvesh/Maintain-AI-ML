@@ -15,9 +15,13 @@ def get_pipeline():
     import torch
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    # Keep CPU inference deliberately lightweight for free-tier deployments.
+    # Free Render instances have very limited CPU/RAM. Keep inference bounded.
     if device == "cpu":
-        torch.set_num_threads(max(1, min(2, os.cpu_count() or 1)))
+        torch.set_num_threads(1)
+        try:
+            torch.set_num_interop_threads(1)
+        except RuntimeError:
+            pass
 
     if _is_chronos2():
         from chronos import Chronos2Pipeline
@@ -61,15 +65,23 @@ def forecast(values: list[float], horizon: int) -> list[float]:
     import torch
 
     pipeline = get_pipeline()
-    # The free-tier model only needs the recent context. Keeping this bounded
-    # also prevents accidental memory growth if a caller sends a long series.
-    context = torch.tensor(values[-512:], dtype=torch.float32)
-    predictions = pipeline.predict(context, prediction_length=horizon)
+    context = torch.tensor(values[-128:], dtype=torch.float32)
+
+    # One trajectory is enough for the demo point forecast and is substantially
+    # cheaper than the Chronos default sampling count on a free CPU instance.
+    with torch.inference_mode():
+        if _is_chronos2():
+            predictions = pipeline.predict(context, prediction_length=horizon)
+        else:
+            predictions = pipeline.predict(
+                context,
+                prediction_length=horizon,
+                num_samples=1,
+            )
 
     tensor = predictions[0].detach().float().cpu()
 
     if _is_chronos2():
-        # Chronos-2 returns [batch, horizon, quantiles]. Select the 0.5 quantile.
         if tensor.ndim == 3:
             tensor = tensor[0]
         if tensor.ndim == 2:
@@ -80,8 +92,6 @@ def forecast(values: list[float], horizon: int) -> list[float]:
                 median_index = tensor.shape[-1] // 2
             return tensor[:, median_index].tolist()[:horizon]
     else:
-        # Classic Chronos returns [batch, samples, horizon]. Use the median
-        # across sampled trajectories for a stable point forecast.
         if tensor.ndim == 2:
             return tensor.median(dim=0).values.tolist()[:horizon]
 
