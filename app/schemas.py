@@ -1,10 +1,24 @@
 from typing import Literal
+
 from pydantic import BaseModel, Field
 
+
+ChronosModel = Literal[
+    "amazon/chronos-bolt-tiny",
+    "amazon/chronos-t5-tiny",
+    "amazon/chronos-2",
+    "chronos-bolt-tiny",
+    "chronos-t5-tiny",
+    "chronos-2",
+    "timer",
+]
+
+
 class ForecastRequest(BaseModel):
-    model: Literal["chronos-2", "timer"] = "chronos-2"
+    model: ChronosModel = "amazon/chronos-bolt-tiny"
     values: list[float] = Field(min_length=32)
-    horizon: int = Field(default=12, ge=1, le=96)
+    horizon: int = Field(default=12, ge=1, le=64)
+
 
 class ForecastResponse(BaseModel):
     available: bool
