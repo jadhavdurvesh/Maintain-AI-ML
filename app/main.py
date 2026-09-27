@@ -7,7 +7,7 @@ from .chronos import forecast as chronos_forecast
 from .chronos import status as chronos_status
 from .schemas import ForecastRequest, ForecastResponse
 
-app = FastAPI(title="MAINTAIN AI ML", version="0.1.1")
+app = FastAPI(title="MAINTAIN AI ML", version="0.1.2")
 
 UI_FILE = Path(__file__).parent / "static" / "index.html"
 
@@ -27,7 +27,7 @@ def models():
     status = chronos_status()
     return {
         "models": {
-            "chronos-2": status,
+            "chronos": status,
             "timer": {"available": False, "status": "planned_after_chronos"},
         }
     }
