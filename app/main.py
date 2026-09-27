@@ -7,7 +7,7 @@ from .chronos import forecast as chronos_forecast
 from .chronos import status as chronos_status
 from .schemas import ForecastRequest, ForecastResponse
 
-app = FastAPI(title="MAINTAIN AI ML", version="0.1.0")
+app = FastAPI(title="MAINTAIN AI ML", version="0.1.1")
 
 UI_FILE = Path(__file__).parent / "static" / "index.html"
 
@@ -24,9 +24,10 @@ def health():
 
 @app.get("/models")
 def models():
+    status = chronos_status()
     return {
         "models": {
-            "chronos-2": chronos_status(),
+            "chronos-2": status,
             "timer": {"available": False, "status": "planned_after_chronos"},
         }
     }
@@ -36,11 +37,28 @@ def models():
 def forecast(payload: ForecastRequest):
     if payload.model == "timer":
         raise HTTPException(status_code=501, detail="Timer adapter is not implemented yet")
+
     status = chronos_status()
     if not status.get("available"):
-        return ForecastResponse(available=False, model="chronos-2", horizon=payload.horizon, reason=status.get("reason"))
+        return ForecastResponse(
+            available=False,
+            model=status.get("model", "chronos"),
+            horizon=payload.horizon,
+            reason=status.get("reason"),
+        )
+
     try:
         result = chronos_forecast(payload.values, payload.horizon)
-        return ForecastResponse(available=True, model="chronos-2", forecast=result, horizon=payload.horizon)
+        return ForecastResponse(
+            available=True,
+            model=status.get("model", "chronos"),
+            forecast=result,
+            horizon=payload.horizon,
+        )
     except Exception as exc:
-        return ForecastResponse(available=False, model="chronos-2", horizon=payload.horizon, reason=f"inference failed: {exc}")
+        return ForecastResponse(
+            available=False,
+            model=status.get("model", "chronos"),
+            horizon=payload.horizon,
+            reason=f"inference failed: {exc}",
+        )
