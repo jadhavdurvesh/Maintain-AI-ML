@@ -2,7 +2,10 @@ services:
   - type: web
     name: maintain-ai-ml
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true
+    envVars:
+      - key: MAINTAIN_CHRONOS_MODEL
+        value: amazon/chronos-bolt-tiny
