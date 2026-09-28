@@ -29,6 +29,14 @@ def _family() -> str:
 def get_pipeline():
     import torch
 
+    # Timer is the memory-heavy secondary model. Never keep both models resident
+    # on the same low-memory Render instance.
+    try:
+        from .timer import release_model
+        release_model()
+    except Exception:
+        pass
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cpu":
         torch.set_num_threads(1)
@@ -59,6 +67,19 @@ def get_pipeline():
         device_map=device,
         torch_dtype=torch.float32,
     )
+
+
+def release_pipeline() -> None:
+    """Release the cached Chronos model so a secondary model can use the RAM."""
+    get_pipeline.cache_clear()
+    try:
+        import gc
+        gc.collect()
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
 
 
 def status() -> dict:
