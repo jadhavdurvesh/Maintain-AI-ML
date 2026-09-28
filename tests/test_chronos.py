@@ -8,8 +8,8 @@ def test_forecast_extracts_median_quantile(monkeypatch):
     class FakePipeline:
         quantiles = [0.1, 0.5, 0.9]
 
-        def predict(self, context, prediction_length):
-            # [batch, horizon, quantiles]
+        def predict(self, context, prediction_length, **kwargs):
+            # [batch, horizon, quantiles]; accept Bolt sampling kwargs too.
             return torch.tensor([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]])
 
     fake_chronos = types.SimpleNamespace(Chronos2Pipeline=object)
