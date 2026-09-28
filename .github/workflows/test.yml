@@ -14,4 +14,4 @@ jobs:
           python-version: "3.11"
       - run: pip install fastapi pydantic torch pytest
       - run: python -m py_compile app/*.py
-      - run: pytest -q
+      - run: python -m pytest -q
