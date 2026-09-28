@@ -13,14 +13,14 @@ from .timer import status as timer_status
 from .timer_lite import forecast as timer_lite_forecast
 from .timer_lite import status as timer_lite_status
 
-app = FastAPI(title="MAINTAIN AI ML", version="0.4.0")
+app = FastAPI(title="MAINTAIN AI ML", version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https://([a-zA-Z0-9-]+\.)?vercel\.app$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["*"] ,
 )
 
 UI_FILE = Path(__file__).parent / "static" / "index.html"
@@ -39,7 +39,7 @@ def dashboard():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "maintain-ai-ml"}
+    return {"status": "ok", "service": "maintain-ai-ml", "timer_lite": _timer_lite_enabled()}
 
 
 @app.get("/models")
@@ -60,6 +60,8 @@ def forecast(payload: ForecastRequest):
 
     with _INFERENCE_LOCK:
         if payload.model == "timer":
+            # Timer-Lite is the default production path. It preserves the
+            # forecast contract without loading the 84M-parameter checkpoint.
             if _timer_lite_enabled():
                 try:
                     result = timer_lite_forecast(payload.values, payload.horizon)
