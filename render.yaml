@@ -9,11 +9,13 @@ services:
     envVars:
       - key: MAINTAIN_CHRONOS_MODEL
         value: amazon/chronos-bolt-tiny
-      - key: MAINTAIN_ENABLE_TIMER
+      - key: MAINTAIN_ENABLE_TIMER_LITE
         value: "1"
+      - key: MAINTAIN_ENABLE_TIMER
+        value: "0"
       - key: MAINTAIN_TIMER_MODEL
         value: thuml/timer-base-84m
       - key: MAINTAIN_TIMER_CONTEXT
-        value: "576"
+        value: "256"
       - key: MAINTAIN_TIMER_DTYPE
         value: fp16
