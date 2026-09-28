@@ -13,3 +13,7 @@ services:
         value: "1"
       - key: MAINTAIN_TIMER_MODEL
         value: thuml/timer-base-84m
+      - key: MAINTAIN_TIMER_CONTEXT
+        value: "576"
+      - key: MAINTAIN_TIMER_DTYPE
+        value: fp16
