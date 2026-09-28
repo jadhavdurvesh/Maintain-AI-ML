@@ -16,7 +16,7 @@ ChronosModel = Literal[
 
 class ForecastRequest(BaseModel):
     model: ChronosModel = "amazon/chronos-bolt-tiny"
-    values: list[float] = Field(min_length=32)
+    values: list[float] = Field(min_length=16)
     horizon: int = Field(default=12, ge=1, le=64)
 
 
